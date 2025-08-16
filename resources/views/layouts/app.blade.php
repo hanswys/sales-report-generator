@@ -24,10 +24,22 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <a class="navbar-brand" href="{{ route('reports.index') }}">Sales Reports</a>
-        <div class="ml-auto">
+<div class="ml-auto">
+    @auth
+        <form action="{{ route('reports.upload') }}" method="POST" enctype="multipart/form-data" class="mb-4" style="display:inline;">
+            @csrf
             <a href="{{ route('reports.excel') }}" class="btn btn-success btn-sm mr-2">Export Excel</a>
-            <a href="{{ route('reports.pdf') }}" class="btn btn-danger btn-sm">Export PDF</a>
-        </div>
+            <a href="{{ route('reports.pdf') }}" class="btn btn-danger btn-sm mr-2">Export PDF</a>
+            <!-- Upload form fields go here if needed -->
+        </form>
+        <form action="{{ route('logout') }}" method="POST" style="display:inline;">
+            @csrf
+            <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+        </form>
+    @else
+        <a href="{{ route('login') }}" class="btn btn-primary btn-sm mr-2">Login</a>
+    @endauth
+</div>
     </nav>
 
     <div class="container">
