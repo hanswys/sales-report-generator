@@ -17,7 +17,7 @@ return view('reports.index', compact('sales'));
 
 public function exportExcel()
 {
-return Excel::download(new SalesExport, 'sales_report.xlsx');
+    return Excel::download(new \App\Exports\SalesExport, 'sales_report.xlsx');
 }
 
 public function exportPDF()
