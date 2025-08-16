@@ -6,13 +6,44 @@ use App\Models\Sale;
 use App\Exports\SalesExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Http\Request;
+
 
 class SalesReportController extends Controller
 {
-public function index()
+public function index(Request $request)
 {
-$sales = Sale::latest()->paginate(10);
-return view('reports.index', compact('sales'));
+    $query = Sale::query();
+
+    if ($request->filled('product')) {
+        $query->where('product', 'like', '%' . $request->product . '%');
+    }
+    if ($request->filled('start_date')) {
+        $query->where('sale_date', '>=', $request->start_date);
+    }
+    if ($request->filled('end_date')) {
+        $query->where('sale_date', '<=', $request->end_date);
+    }
+    if ($request->filled('min_quantity')) {
+        $query->where('quantity', '>=', $request->min_quantity);
+    }
+    if ($request->filled('max_quantity')) {
+        $query->where('quantity', '<=', $request->max_quantity);
+    }
+    if ($request->filled('min_price')) {
+        $query->where('price', '>=', $request->min_price);
+    }
+    if ($request->filled('max_price')) {
+        $query->where('price', '<=', $request->max_price);
+    }
+
+    $sales = $query->latest()->paginate(10);
+
+    if ($request->ajax()) {
+        return view('reports.partials.sales_table', compact('sales'))->render();
+    }
+
+    return view('reports.index', compact('sales'));
 }
 
 public function exportExcel()
