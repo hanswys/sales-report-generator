@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
@@ -41,7 +42,7 @@ class ReportController extends Controller
 
         return back()->with('success', 'CSV imported successfully!');
     }
-    
+
 public function edit($id)
 {
     $sale = DB::table('sales')->where('id', $id)->first();
@@ -64,5 +65,73 @@ public function destroy($id)
 {
     DB::table('sales')->where('id', $id)->delete();
     return back()->with('success', 'Sale deleted!');
+}
+
+public function pdf()
+{
+    $sales = DB::table('sales')->get();
+
+    // Sales summary
+    $totalRevenue = $sales->sum('price');
+    $totalItems = $sales->sum('quantity');
+
+    // Prepare data for charts
+    $revenueByProduct = $sales->groupBy('product')->map(function ($group) {
+        return $group->sum('price');
+    });
+
+    $monthlySales = $sales->groupBy(function($item) {
+        return \Carbon\Carbon::parse($item->sale_date)->format('Y-m');
+    })->map(function ($group) {
+        return $group->sum('price');
+    });
+
+    // Render Chart.js charts to images (see step 2)
+    $chartImages = $this->generateChartImages($revenueByProduct, $monthlySales);
+
+    $pdf = Pdf::loadView('reports.pdf', compact(
+        'sales', 'totalRevenue', 'totalItems', 'chartImages'
+    ));
+
+    return $pdf->download('sales_report.pdf');
+}
+
+// Helper method to generate chart images
+// (removed duplicate demo implementation)
+
+protected function generateChartImages($revenueByProduct, $monthlySales)
+{
+    $productLabels = json_encode(array_keys($revenueByProduct->toArray()));
+    $productData = json_encode(array_values($revenueByProduct->toArray()));
+
+    $monthlyLabels = json_encode(array_keys($monthlySales->toArray()));
+    $monthlyData = json_encode(array_values($monthlySales->toArray()));
+
+    $revenueChartUrl = "https://quickchart.io/chart?c=" . urlencode(json_encode([
+        'type' => 'bar',
+        'data' => [
+            'labels' => array_keys($revenueByProduct->toArray()),
+            'datasets' => [[
+                'label' => 'Revenue',
+                'data' => array_values($revenueByProduct->toArray())
+            ]]
+        ]
+    ]));
+
+    $monthlyChartUrl = "https://quickchart.io/chart?c=" . urlencode(json_encode([
+        'type' => 'line',
+        'data' => [
+            'labels' => array_keys($monthlySales->toArray()),
+            'datasets' => [[
+                'label' => 'Monthly Sales',
+                'data' => array_values($monthlySales->toArray())
+            ]]
+        ]
+    ]));
+
+    return [
+        'revenueByProduct' => $revenueChartUrl,
+        'monthlySales' => $monthlyChartUrl
+    ];
 }
 }
